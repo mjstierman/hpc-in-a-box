@@ -1,0 +1,65 @@
+---
+- hosts: all
+  name: Append local hosts file to remote /etc/hosts
+  become: true
+  tasks:
+  - name: Append the local hosts to local /etc/hosts
+    ansible.builtin.blockinfile:
+      path: /etc/hosts
+      block: "{{lookup('ansible.builtin.file', '../hosts')}}"
+      state: present
+      append_newline: true
+
+- hosts: all
+  become: true
+  name: configure firewalld
+  tasks:
+  - name: Ensure firewalld is stopped and disabled
+    ansible.builtin.service:
+      name: firewalld
+      state: stopped
+      enabled: false
+
+- hosts: all
+  name: Ensure common prerequisites are installed
+  become: true
+  tasks:
+  - name: Verify nfs-utils openmpi slurm munge installed
+    ansible.builtin.dnf:
+      name:
+      - slurm
+      - openmpi
+      - nfs-utils
+      - chrony
+      - munge
+      state: latest
+  - name: Ensure NFS is running
+    ansible.builtin.service:
+      name: nfs-client.target
+      enabled: yes
+      state: started
+
+
+- hosts: all
+  name: Syncronize clocks
+  become: true
+  tasks:
+  - name: Ensure NTP (chrony) is set to hpc-control-1
+    ansible.builtin.lineinfile:
+      path: /etc/chrony.conf
+      state: present
+      regexp: '^server'
+      line: server 192.168.56.11
+    register: chronyd
+  - name: Ensure NTP (chrony) is running; resart if config was changed
+    ansible.builtin.service:
+      name: chronyd
+      enabled: true
+      state: started
+  - name: Restart chronyd if it needed to be updated
+    ansible.builtin.service:
+      name: chronyd
+      state: restarted
+    when: chronyd.changed
+
+

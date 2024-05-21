@@ -1,0 +1,98 @@
+---
+- hosts: all
+  name: Configure Slurm on all nodes
+  become: true
+  tasks:
+  - name: Set `hpc-control-1` as SlurmctldHost
+    ansible.builtin.lineinfile:
+      path: /etc/slurm/slurm.conf
+      regexp: '^SlurmctldHost='
+      line: SlurmctldHost=hpc-control-1
+    register: SlurmctldHost
+  - name: Remove defaults from slurm.conf
+    ansible.builtin.lineinfile:
+      path: /etc/slurm/slurm.conf
+      state: absent
+      regexp: '^NodeName=localhost CPUs=1 State=UNKNOWN'
+  - name: Add Controls and Nodes from hosts
+    ansible.builtin.blockinfile:
+      path: /etc/slurm/slurm.conf
+      block: "{{lookup('ansible.builtin.file', '../compute_nodes')}}"
+      state: present
+      append_newline: true
+    register: computenodes
+
+- hosts: 192.168.56.11
+  become: true
+  tasks:
+  - name: Create munge key if it doesn't exist
+    ansible.builtin.command: 
+      cmd: create-munge-key
+      creates: /etc/munge/munge.key
+  - name: Copy munge key to NFS share
+    ansible.builtin.copy:
+      src: /etc/munge/munge.key
+      dest: /mnt/nfs/
+      owner: munge
+      group: munge
+      mode: '0655'
+      remote_src: yes
+
+- hosts: all:!192.168.56.11
+  become: true
+  tasks:
+  - name: Copy munge key from NFS share to /etc/munge
+    ansible.builtin.copy:
+      src: /mnt/nfs/munge.key
+      dest: /etc/munge/
+      owner: munge
+      group: munge
+      mode: '0600'
+      remote_src: yes
+
+- hosts: all
+  become: true
+  tasks:
+  - name: Ensure munge has started and is enabled
+    ansible.builtin.service:
+      name: munge
+      state: started
+      enabled: true
+
+- hosts: hpc_control
+  become: true
+  tasks:
+  - name: Restart Slurm if slurm.conf changed
+    ansible.builtin.service:
+      name: slurmctld
+      state: restarted
+    when: computenodes.changed
+
+- hosts: hpc_node
+  become: true
+  tasks:
+  - name: Restart Slurm if slurm.conf changed
+    ansible.builtin.service:
+      name: slurmd
+      state: restarted
+    when: computenodes.changed
+
+- hosts: hpc_control
+  become: true
+  tasks:
+  - name: Otherwise, Start and Enable slurm-slurmctld on Control
+    ansible.builtin.service:
+      name: slurmctld
+      state: started
+      enabled: true
+
+- hosts: hpc_node
+  become: true
+  tasks:
+  - name: Otherwise, Start and Enable slurm-slurmd on Nodes
+    ansible.builtin.service:
+      name: slurmd
+      state: started
+      enabled: yes
+  
+  

@@ -1,0 +1,29 @@
+---
+- hosts: hpc_node
+  become: true
+  tasks:
+  - name: install slurm client package
+    ansible.builtin.dnf:
+      name:
+        - slurm-slurmd
+      state: installed
+
+- hosts: hpc_node
+  name: Configure NFS mount
+  become: true
+  tasks:
+  - name: Ensure NFS share folder is present and correct attributes
+    ansible.builtin.file:
+      path: /mnt/nfs
+      state: directory
+      mode: '0755'
+      owner: vagrant
+      group: vagrant
+  - name: Ensure NFS share folder is mounted to hpc-control-1
+    ansible.posix.mount:
+      src: 192.168.56.11:/mnt/nfs
+      path: /mnt/nfs
+      opts: rw,sync
+      state: mounted
+      fstype: nfs
+

@@ -1,0 +1,58 @@
+---
+- hosts: hpc_control
+  become: true
+  tasks:
+  - name: Ensure prerequisite packages for an HCP control node are installed
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+    with_items:
+    - slurm-slurmctld
+
+- hosts: 192.168.56.11
+  name: Configure NFS sharing on Primary controller
+  become: true
+  tasks:
+  - name: Ensure NFS share folder is present and correct attributes
+    ansible.builtin.file:
+       path: /mnt/nfs
+       state: directory
+       mode: '0755'
+       owner: vagrant
+       group: vagrant
+  - name: Ensure rpcbind nfslock nfs are enabled and running
+    service:
+      name: "{{ item }}"
+      enabled: yes
+      state: started
+    with_items:
+      - rpcbind
+      - nfs-server
+  - name: Ensure /mnt/nfs is shared with network
+    ansible.builtin.lineinfile:
+      path: /etc/exports
+      state: present
+      regexp: '^/mnt/nfs'
+      line: /mnt/nfs 192.168.56.0/24(rw,sync,no_subtree_check)
+    register: nfs_share
+  - name: Export the nfs share if it was not previously
+    ansible.builtin.command: exportfs -ra
+    when: nfs_share.changed
+
+- hosts: hpc_control:!192.168.56.11
+  name: Configure NFS mounts on controllers but not primary
+  become: true
+  tasks:
+  - name: Ensure NFS share folder is present and correct attributes
+    ansible.builtin.file:
+      path: /mnt/nfs
+      state: directory
+      mode: '0755'
+      owner: vagrant
+      group: vagrant
+  - name: Ensure NFS share folder is mounted to hpc-control-1
+    ansible.posix.mount:
+      src: 192.168.56.11:/mnt/nfs
+      path: /mnt/nfs
+      state: mounted
+      fstype: nfs
+

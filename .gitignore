@@ -1,0 +1,6 @@
+# ignore Vagrant cache file
+.git
+.vagrant
+compute_nodes
+inventory
+hosts
