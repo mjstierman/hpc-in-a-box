@@ -12,7 +12,7 @@ To run this script, you will need the following installed on your computer:
 </ul>
 
 ## How to use
-#### Congiure the cluster
+#### Configure the cluster
 <ol>
   <li>Ensure the prerequisites are met</li>
   <li>`dnf install -y ansible vagrant virtualbox`</li>
