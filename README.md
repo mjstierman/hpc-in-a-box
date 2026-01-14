@@ -12,6 +12,7 @@ To run this script, you will need the following installed on your computer:
 </ul>
 
 ## How to use
+#### Congiure the cluster
 <ol>
   <li>Ensure the prerequisites are met</li>
   <li>`dnf install -y ansible vagrant virtualbox`</li>
@@ -24,6 +25,11 @@ To run this script, you will need the following installed on your computer:
   <li>Run the script</li>
   <li>`./hpc-in-a-box.sh`</li>
 </ol>
+
+### Run some tests
+Tests can be added to the tests.sh file, which will run all the tests you add. Copy the `sshpass` command and sub in whatever `"srun --nodes=$NUM_NODES %command%` you'd like to execute across the nodes.
+
+Simply run `./tests.sh`.
 
 ## Notes
 Some general notes. Kind of an FAQ.
