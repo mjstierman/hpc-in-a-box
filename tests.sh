@@ -5,12 +5,6 @@
 HPC_CTRL_1_IP=$(grep hpc-control-1 hosts | awk '{print $1}')
 NUM_NODES=$(wc -l < compute_nodes)
 
-# Is this file executable?
-if [ ! -x ./tests.sh ]; then
-    echo "Making tests script executable."
-    chmod +x ./tests.sh
-fi
-
 ### Tests to confirm the HPC cluster is working ###
 ### Add tests below ###
 printf "%s\n" "If you see a time and date stamp here, Congratulations! The cluster worked! Feel free to add you own tests."
